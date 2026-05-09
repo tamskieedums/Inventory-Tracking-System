@@ -1,0 +1,770 @@
+import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.InputMismatchException;
+import java.time.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
+
+
+public class Inventory_System {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        ArrayList<Parent_Product> Storage = new ArrayList<>();
+        initial_products(Storage, sc);
+        while (true){
+            System.out.println("======== Main Menu =======");
+            System.out.println("1. View Storage");
+            System.out.println("2. Search Product / View Product Stocks");
+            System.out.println("3. Load Stock");
+            System.out.println("4. Unload Stock");
+            System.out.println("5. Update Product");
+            System.out.println("6. Add Product");
+            System.out.println("7. Remove Product");
+            System.out.println("8. View Expiring Products");
+            System.out.println("9. View Expired Products");
+            System.out.println("10. Exit");
+            int Choice = 0;
+            try{
+                System.out.println("Pick a Route (1-10)");
+                Choice = sc.nextInt();
+                sc.nextLine();
+            }
+            catch (InputMismatchException e) {
+                System.out.println("Enter a Valid Number");
+                sc.nextLine();
+                continue;
+            }
+            if      (Choice == 1){ check_storage(Storage);  }
+
+            else if (Choice == 2){ search_product(Storage, sc); }
+
+            else if (Choice == 3){ restock(Storage, sc); }
+
+            else if (Choice == 4){ destock(Storage, sc);}
+
+            else if (Choice == 5){ update_product(Storage, sc); }
+
+            else if (Choice == 6){ add_product(Storage, sc); }
+
+            else if (Choice == 7){ remove_product(Storage, sc); }
+
+            else if (Choice == 8){ expiring_checker(Storage);}
+
+            else if (Choice == 9){ expired_checker(Storage);}
+
+            else if (Choice == 10){ System.out.println("Closed");System.exit(0);}
+
+            else    {System.out.println("Please Choose Between 1-10");}
+        }
+    }
+
+    public static void check_storage(ArrayList<Parent_Product> Storage){
+    Collections.sort(Storage, Comparator.comparing(p -> p.Name));
+    System.out.println("====================== Storage ======================");
+    if (Storage.size() == 0){
+        System.out.println("                    Storage Empty                   ");
+        System.out.println("=====================================================");
+        return;
+    }
+    System.out.printf("%-25s | %-10s%n", "NAME", "QUANTITY");
+    System.out.println("=====================================================");
+    for (int i = 0; i < Storage.size(); i++){
+        Parent_Product Parent_Item = Storage.get(i);
+        String Name = Parent_Item.Name;
+        ArrayList<Product> Batch = Parent_Item.Batch;
+        int Quantity = 0;
+        for (int j = 0; j < Batch.size(); j++){
+            Quantity += Batch.get(j).Quantity;
+        }
+        System.out.printf("%-25s | %-10d%n", Name, Quantity);
+        System.out.println("-----------------------------------------------------");
+    }
+    System.out.println("=====================================================");
+}
+
+    public static void search_product(ArrayList<Parent_Product> Storage, Scanner sc){
+    System.out.println("============ Search Product ============");
+    ArrayList<Product> Batch = new ArrayList<>();
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+    System.out.println("Enter Product Name or Enter 0 to Exit");
+    String Name = sc.nextLine().toUpperCase();
+
+    if (Name.equals("0")){return;}
+
+    for (int i = 0; i < Storage.size(); i++){
+        Parent_Product Temp_Parent = Storage.get(i);
+        if (Name.replace(" ", "").equals(Temp_Parent.Name.replace(" ", ""))){
+            Batch.addAll(Temp_Parent.Batch);
+            batch_sorter(Batch);
+            System.out.println("=============== Product Found ===============");
+            System.out.println("============ " + Temp_Parent.Name + " ============");
+            System.out.printf("%-5s | %-10s | %-15s%n", "NO.", "QUANTITY", "EXPIRATION DATE");
+            System.out.println("---------------------------------------------");
+            for(int j = 0; j < Batch.size(); j++){
+                Product Temp_Product = Batch.get(j);
+                System.out.printf("%-5d | %-10d | %-15s%n", (j+1), Temp_Product.Quantity, Temp_Product.Expiration_Date.format(formatter));
+            }
+            System.out.println("=============================================");
+            return;
+            }   
+        }
+        System.out.println("====================================");
+        System.out.println("          Product Not Found         ");
+        System.out.println("====================================");
+        return;
+    }
+
+    public static void restock(ArrayList<Parent_Product> Storage, Scanner sc){
+        System.out.println("============ Load Product Stock ============");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        ArrayList<Product> Batch = new ArrayList<>();
+        System.out.println("Enter Product Name or Enter 0 to Exit");
+        String Name = sc.nextLine().toUpperCase();
+        if (Name.equals("0")){return;}
+        for (int i = 0; i < Storage.size(); i++){
+            Parent_Product Temp_Parent = Storage.get(i);
+            if (Name.replace(" ", "").equals(Temp_Parent.Name.replace(" ", ""))){
+                Batch.addAll(Temp_Parent.Batch);
+                batch_sorter(Batch);
+                Product Temp_Product = Batch.get(0);
+                System.out.println("=============== Product Found ===============");
+                int Quantity = 0;
+                while(true){
+                    System.out.println("Enter Load Quantity");
+                    try{
+                        Quantity = sc.nextInt();
+                        sc.nextLine();
+                        if (Quantity <= 0){ System.out.println("Invalid Quantity");continue;}
+                        break;
+                    }
+                    catch(InputMismatchException e ){
+                        System.out.println("Enter a Valid Number");
+                        sc.nextLine();
+                    }
+                }
+                LocalDate Expiration_Date = null;
+                while(true){
+                    System.out.println("Enter Expiration Date (MM-dd-yyyy)");
+                    try{
+                        Expiration_Date = LocalDate.parse(sc.nextLine(), formatter);
+                        break;
+                    }
+                    catch(DateTimeParseException e){
+                        System.out.println("Invalid Date Format check if (-) is added properly");
+                    }
+                }
+                Product Item = new Product(Temp_Product.Name, Quantity, Temp_Product.Price, Expiration_Date);
+                Temp_Parent.Batch.add(Item);
+                System.out.println("===========================================");
+                System.out.println(" A New Batch of ("+Temp_Parent.Name+") Has Been Stored");
+                System.out.println("===========================================");
+                return;
+            }   
+        }
+        System.out.println("====================================");
+        System.out.println("          Product Not Found         ");
+        System.out.println("====================================");
+        return;
+    }
+
+    public static void destock(ArrayList<Parent_Product> Storage, Scanner sc){
+        System.out.println("============ Unload Product Stock ============");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        ArrayList<Product> Batch = new ArrayList<>();
+        System.out.println("Enter Product Name or Enter 0 to Exit");
+        String Name = sc.nextLine().toUpperCase();
+        if (Name.equals("0")){return;}
+        for (int i = 0; i < Storage.size(); i++){
+            Parent_Product Temp_Parent = Storage.get(i);
+            if (Name.replace(" ", "").equals(Temp_Parent.Name.replace(" ", ""))){
+                System.out.println("=============== Product Found ===============");
+                Batch.addAll(Temp_Parent.Batch);
+                batch_sorter(Batch);
+                System.out.println("============ " + Temp_Parent.Name + " ============");
+                System.out.printf("%-10s | %-10s | %-15s%n", "BATCH NO.", "QUANTITY", "EXPIRATION DATE");
+                System.out.println("---------------------------------------------");
+                for (int j = 0; j < Batch.size(); j++){
+                    System.out.printf("%-10d | %-10d | %-15s%n", (j+1), Batch.get(j).Quantity, Batch.get(j).Expiration_Date.format(formatter));
+                }
+                System.out.println("=============================================");
+                while(true){
+                    int Choice = 0;
+                    while(true){
+                        System.out.println("Which Batch Would You Like to Unload From?");
+                        try{
+                            Choice = sc.nextInt();
+                            sc.nextLine();
+                            if (Choice - 1 < 0 || Choice - 1 >= Batch.size()){ System.out.println("Invalid Choice"); continue; }
+                            break;
+                        }
+                        catch(InputMismatchException e){
+                            System.out.println("Enter a Valid Number");
+                            sc.nextLine();
+                        }
+                    }
+                    boolean Confirmed = false;
+                    while(true){
+                        System.out.println("Are You Sure You Want To Unload From Batch "+ Choice +"? (Y or N)");
+                        String Answer = sc.nextLine();
+                        if(Answer.toUpperCase().equals("Y")){
+                            Confirmed = true;
+                            break;
+                        }
+                        else if (Answer.toUpperCase().equals("N")){
+                            break;
+                        }
+                        else{
+                            System.out.println("Choose Between (Y) For Yes or (N) For No");
+                        }
+                    }
+                    if (!Confirmed){ continue; }
+                    Product Temp_Product = Batch.get(Choice - 1);
+                    int Quantity = 0;
+                    while(true){
+                        System.out.println("Enter Load Quantity");
+                        try{
+                            Quantity = sc.nextInt();
+                            sc.nextLine();
+                            if (Quantity < 0){ System.out.println("Invalid Quantity"); continue; }
+                            if (Quantity > Temp_Product.Quantity){ System.out.println("Not Enough Stock From This Batch, Please Choose Again"); continue; }
+                            break;
+                        }
+                        catch(InputMismatchException e){
+                            System.out.println("Enter a Valid Number");
+                            sc.nextLine();
+                        }
+                    }
+                    Temp_Product.Quantity -= Quantity;
+                    System.out.println("===========================================");
+                    System.out.println("("+Quantity+") Of ("+ Temp_Parent.Name +") Batch "+Choice+" Has Been Unloaded");
+                    System.out.println("===========================================");
+                    if (Temp_Product.Quantity <= 0){
+                        Temp_Parent.Batch.remove(Temp_Product);
+                        System.out.println("=============================");
+                        System.out.println("        Batch Removed        ");
+                        System.out.println("Reason: Quantity Dropped to 0");
+                        System.out.println("=============================");
+                    }
+                    return;
+                }
+            }
+        }
+        System.out.println("====================================");
+        System.out.println("          Product Not Found         ");
+        System.out.println("====================================");
+    }
+
+    public static void update_product(ArrayList<Parent_Product> Storage, Scanner sc){
+        System.out.println("============ Updade Product ============");
+        System.out.println("Enter Product Name or Enter 0 to Exit");
+        String Name = sc.nextLine().toUpperCase();
+        Parent_Product Temp_Parent = null;
+        Boolean Found = false;
+        if (Name.equals("0")){return;}
+        for (int i = 0; i < Storage.size(); i++){
+            Temp_Parent = Storage.get(i);
+            if (Name.replace(" ", "").equals(Temp_Parent.Name.replace(" ", ""))){
+                batch_sorter(Temp_Parent.Batch);
+                System.out.println("====================================");
+                System.out.println("            Product Found           ");
+                System.out.println("====================================");
+                Found = true;
+                break;
+            }
+        }
+        if (!Found){
+                    System.out.println("====================================");
+                    System.out.println("          Product Not Found         ");
+                    System.out.println("====================================");
+                    return;
+        }
+        while(true){
+            System.out.println("============ Update Product Menu ============");
+            System.out.println("Product: "+ Temp_Parent.Name);
+            System.out.println("Pick What To Edit");
+            System.out.println("1. Product Name");
+            System.out.println("2. Products Batch Expiration dates");
+            System.out.println("3. Exit");
+            int Choice = 0;
+            while(true){
+                System.out.println("Pick A Route Number (1-3)");
+                try{
+                    Choice = sc.nextInt();
+                    sc.nextLine();
+                    break;
+                }
+                catch(InputMismatchException e ){
+                    System.out.println("Enter a Valid Number");
+                    sc.nextLine();
+                }
+            }
+        if      (Choice == 1){name_update(Storage, Temp_Parent, sc);return;}
+        else if (Choice == 2){expiration_update(Temp_Parent.Batch, sc);return;}
+        else if (Choice == 3){return;}
+        else {System.out.println("Choose Between 1-3");}
+        }
+    }
+        public static void name_update(ArrayList<Parent_Product> Storage,Parent_Product Temp_Parent, Scanner sc) {
+        Boolean Condition = false;
+        String Name = null;
+        while (true) {
+            Condition = false;
+            
+        
+            System.out.println("============== Name Update ==============");
+            System.out.println("Enter Updated Name or Enter 0 to Exit");
+            Name = sc.nextLine().toUpperCase();
+            if (Name.equals("0")){return;}
+            for (int i = 0; i < Storage.size(); i++){
+                Parent_Product Temp_Parent2 = Storage.get(i);
+                if (Name.replace(" ", "").equals(Temp_Parent2.Name.replace(" ", ""))){
+                    System.out.println("=============================================");
+                    System.out.println("            Product Already Exists           ");
+                    System.out.println("=============================================");
+                    Condition = true;
+                    break;
+                    }
+                
+                }
+            if (Condition) { continue;
+            }
+            else if (Name.equals("0")){return;}
+            else{break;}
+        }
+        System.out.println("========================================");
+        System.out.println("(" + Temp_Parent.Name + ") Has Been Updated to (" + Name + ")");
+        System.out.println("========================================");
+        Temp_Parent.Name = Name;
+        return;
+    }
+        public static void expiration_update(ArrayList<Product> Batch, Scanner sc) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        if (Batch.size() == 0){
+            System.out.println("===========================");
+            System.out.println("     Batch List is Empty   ");
+            System.out.println("===========================");
+            return;
+        }
+        System.out.println("============ Product: " + Batch.get(0).Name + " ============");
+        System.out.printf("%-10s | %-10s | %-15s%n", "BATCH NO.", "QUANTITY", "EXPIRATION DATE");
+        System.out.println("---------------------------------------------");
+        for(int i = 0; i < Batch.size(); i++){
+            Product Temp_Product = Batch.get(i);
+            System.out.printf("%-10d | %-10d | %-15s%n", (i+1), Temp_Product.Quantity, Temp_Product.Expiration_Date.format(formatter));
+        }
+        System.out.println("=============================================");
+        int Choice = 0;
+        while(true){
+            System.out.println("Enter Batch To Edit");
+            try{
+                Choice = sc.nextInt();
+                sc.nextLine();
+                if (Choice < 1 || Choice > Batch.size()) {System.out.println("Batch Doesn't Exist"); continue;}
+                break;
+            }
+            catch(InputMismatchException e){
+                System.out.println("Enter a Valid Number");
+                sc.nextLine();
+            }
+        }
+        Product Temp_Product = Batch.get(Choice - 1);
+        LocalDate Expiration_Date = null;
+        while(true){
+            System.out.println("Enter Expiration Date (MM-dd-yyyy)");
+            try{
+                Expiration_Date = LocalDate.parse(sc.nextLine(), formatter);
+                break;
+            }
+            catch(DateTimeParseException e){
+                System.out.println("Invalid Date Format check if (-) is added properly");
+            }
+        }
+        System.out.println("=============================================");
+        System.out.println("(" + Temp_Product.Expiration_Date + ") Has Been Updated to (" + Expiration_Date + ")");
+        System.out.println("=============================================");
+        Temp_Product.Expiration_Date = Expiration_Date;
+        }
+        public static void price_update(ArrayList<Product> Batch, Scanner sc){
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");    
+            if (Batch.size() == 0){
+                System.out.println("===========================");
+                System.out.println("      Batch List Empty     ");
+                System.out.println("===========================");
+                return;
+            }
+            for(int i = 0; i < Batch.size();i++){
+                Product Temp_Product = Batch.get(i);
+                System.out.println("========Batch No. ("+(i+1)+") ========");
+                System.out.println("Expiration: " + Temp_Product.Expiration_Date.format(formatter));
+                System.out.println("Quantity: "+ Temp_Product.Quantity);
+                System.out.println("Price: "+ Temp_Product.Price);
+                }
+            System.out.println("===========================");
+
+            System.out.println("Enter Batch To Edit");
+
+            int Choice = 0;
+            while(true){
+                System.out.println("Enter Batch To Edit");
+                try{
+                    Choice = sc.nextInt();
+                    sc.nextLine();
+                    if (Choice < 1 || Choice > Batch.size()) {System.out.println("Batch Don't Exist"); continue;}
+                    break;
+                }
+                catch(InputMismatchException e ){
+                    System.out.println("Enter a Valid Number");
+                    sc.nextLine();
+                }
+            }
+            Product Temp_Product = Batch.get(Choice - 1);
+            Double Price = null;
+            while(true){
+                System.out.println("Enter Price");
+                try{
+                    Price = sc.nextDouble();
+                    sc.nextLine();
+                    if (Price < 0){continue;}
+                    break;
+                }
+                catch(InputMismatchException e){
+                    System.out.println("Invalid Number");
+                }
+            }
+            System.out.println("=============================================");
+            System.out.println("(" + Temp_Product.Price + ") Has Been Updated to (" + Price + ")");
+            System.out.println("=============================================");
+            Temp_Product.Price = Price;
+        }
+        public static void all_price_update(Parent_Product Temp_Parent, Scanner sc){
+        System.out.println("============== Global Price Update ==============");
+        Double Price = null;
+        while(true){
+            System.out.println("Enter Price");
+            try{
+                Price = sc.nextDouble();
+                sc.nextLine();
+                if (Price < 0){continue;}
+                break;
+            }
+            catch(InputMismatchException e){
+                System.out.println("Invalid Number");
+            }
+        }
+        for (int i = 0; i < Temp_Parent.Batch.size(); i++){
+            Product Temp_Product = Temp_Parent.Batch.get(i);
+            System.out.println("===================Batch (" + (i + 1) + ") ===================");
+            System.out.println("(" + Temp_Product.Price + ") Has Been Updated to (" + Price + ")");
+            Temp_Product.Price = Price;
+        }
+        System.out.println("=============================================");
+        }
+
+    public static void add_product(ArrayList<Parent_Product> Storage, Scanner sc){
+        System.out.println("============ Add Product ============");
+        String Name = null;
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        while(true){
+            System.out.println("Enter Product Name or 0 to exit");
+            Name = sc.nextLine().toUpperCase();
+            if(Name.equals("0")){return;}
+            Boolean Yes = true;
+            System.out.println("Are You Sure You Want To Add (" + Name + ")? (Y) for Yes and (N) for No" );
+            String Final = sc.nextLine();
+            if (Final.equalsIgnoreCase("N")){
+                Yes = false;
+            }
+            else if (Final.equalsIgnoreCase("Y")){
+                Yes = true;
+            }
+            else {
+                System.out.println("Choose Between Y or N");
+                continue;
+            }
+
+            if(!Yes){continue;}
+            else{break;}
+        }
+
+        for (int i = 0; i < Storage.size(); i++){
+            if (Name.equals(Storage.get(i).Name)){
+                System.out.println("====================================");
+                System.out.println("       Product Already Exists       ");
+                System.out.println("====================================");
+                return;
+            }
+        }
+        int Quantity = 0;
+        double Price = 0;
+        while(true){
+            System.out.println("Enter Product Quantity");
+            try{
+                Quantity = sc.nextInt();
+                sc.nextLine();
+                if (Quantity < 0){ System.out.println("Invalid Quantity");continue;}
+                break;
+            }
+            catch(InputMismatchException e ){
+                System.out.println("Enter a Valid Number");
+                sc.nextLine();
+            }
+        }
+
+        LocalDate Expiration_Date = null;
+        while(true){
+            System.out.println("Enter Expiration Date (MM-dd-yyyy)");
+            try{
+                Expiration_Date = LocalDate.parse(sc.nextLine(), formatter);
+                break;
+            }
+            catch(DateTimeParseException e){
+                System.out.println("Invalid Date Format check if (-) is added properly");
+            }
+        }
+        Product Item = new Product(Name, Quantity, Price, Expiration_Date);
+        ArrayList<Product> Batch = new ArrayList<>();
+        Batch.add(Item);
+        Parent_Product Parent = new Parent_Product(Name, Batch);
+        Storage.add(Parent);
+        System.out.println("=========================================");
+        System.out.println("       ("+Parent.Name+") Added Successfully   ");
+        System.out.println("=========================================");
+        return;
+    }
+
+
+    public static void remove_product(ArrayList<Parent_Product> Storage, Scanner sc){
+        System.out.println("============ Remove Product ============");
+            System.out.println("Enter Product Name or Enter 0 to Exit");
+            String Name = sc.nextLine().toUpperCase();
+            if (Name.equals("0")){return;}
+            for (int i = 0; i < Storage.size(); i++){
+                Parent_Product Temp_Product = Storage.get(i);
+                if (Name.replace(" ", "").equals(Temp_Product.Name.replace(" ", ""))){
+                    System.out.println("Are You Sure You Want To Remove " +Name+ "? (Y) For Yes and (N) For No");
+                    String ans = sc.nextLine();
+                    if (ans.equalsIgnoreCase("y")){
+                        
+                        Storage.remove(i);
+                        System.out.println("====================================");
+                        System.out.println("      ("+ Temp_Product.Name + ") Has Been Removed     ");
+                        System.out.println("====================================\n");
+                        return;
+                    }
+                    else if (ans.equalsIgnoreCase("n")){
+                        System.out.println("====================================");
+                        System.out.println("              Canceled              ");
+                        System.out.println("====================================\n");
+                        return;
+                    }
+                    else{
+                        System.out.println("Please Choose Between (Y or N)");
+                    }
+                }   
+            }
+            System.out.println("====================================");
+            System.out.println("          Product Not Found         ");
+            System.out.println("====================================\n");
+            return;
+        } 
+
+    public static void expiring_checker(ArrayList<Parent_Product> Storage){
+        ArrayList<Parent_Product> Expiring = new ArrayList<>();
+        LocalDate Current_Date = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        for (int i = 0; i < Storage.size(); i++){
+            Parent_Product Temp_Parent = Storage.get(i);
+            ArrayList<Product> Expiring_Batch = new ArrayList<>();
+            for (int j = 0; j < Temp_Parent.Batch.size(); j++){
+                Product Temp_Product = Temp_Parent.Batch.get(j);
+                if (Temp_Product.Expiration_Date.isBefore(Current_Date.plusMonths(1)) && (Temp_Product.Expiration_Date.isAfter(Current_Date))){
+                    Expiring_Batch.add(Temp_Product);
+                }
+            }
+            if(!Expiring_Batch.isEmpty()){
+                Parent_Product Static_Parent = new Parent_Product(Temp_Parent.Name, Expiring_Batch);
+                Expiring.add(Static_Parent);
+            }
+        }
+        System.out.println("=============== Expiring Products ===============\n");
+        if (Expiring.size() == 0){
+            System.out.println("====================================");
+            System.out.println("        No Expiring Product(s)      ");
+            System.out.println("====================================\n");
+        }
+        else{
+            for (int i = 0; i < Expiring.size(); i++){
+                Parent_Product Temp_Parent = Expiring.get(i);
+                batch_sorter(Temp_Parent.Batch);
+                System.out.println("============ " + Temp_Parent.Name + " ============");
+                System.out.printf("%-10s | %-10s | %-15s%n", "BATCH NO.", "QUANTITY", "EXPIRATION DATE");
+                System.out.println("---------------------------------------------");
+                for(int j = 0; j < Temp_Parent.Batch.size(); j++){
+                    Product Temp_Product = Temp_Parent.Batch.get(j);
+                    System.out.printf("%-10d | %-10d | %-15s%n", (j+1), Temp_Product.Quantity, Temp_Product.Expiration_Date.format(formatter));
+                }
+                System.out.println("=============================================\n");
+                System.out.println();
+            }
+        }
+    }
+        
+    public static void expired_checker(ArrayList<Parent_Product> Storage){
+        ArrayList<Parent_Product> Expiring = new ArrayList<>();
+        LocalDate Current_Date = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+        for (int i = 0; i < Storage.size(); i++){
+            Parent_Product Temp_Parent = Storage.get(i);
+            ArrayList<Product> Expiring_Batch = new ArrayList<>();
+            for (int j = 0; j < Temp_Parent.Batch.size(); j++){
+                Product Temp_Product = Temp_Parent.Batch.get(j);
+                if (Temp_Product.Expiration_Date.isBefore(Current_Date) || (Temp_Product.Expiration_Date.isEqual(Current_Date))){
+                    Expiring_Batch.add(Temp_Product);
+                }
+            }
+            if(!Expiring_Batch.isEmpty()){
+                Parent_Product Static_Parent = new Parent_Product(Temp_Parent.Name, Expiring_Batch);
+                Expiring.add(Static_Parent);
+            }
+        }
+        System.out.println("=============== Expired Products ===============");
+        if (Expiring.size() == 0){
+            System.out.println("====================================");
+            System.out.println("        No Expired Product(s)       ");
+            System.out.println("====================================\n");
+        }
+        else{
+            for (int i = 0; i < Expiring.size(); i++){
+                Parent_Product Temp_Parent = Expiring.get(i);
+                batch_sorter(Temp_Parent.Batch);
+                System.out.println("============ " + Temp_Parent.Name + " ============");
+                System.out.printf("%-10s | %-10s | %-15s%n", "BATCH NO.", "QUANTITY", "EXPIRATION DATE");
+                System.out.println("---------------------------------------------\n");
+                for(int j = 0; j < Temp_Parent.Batch.size(); j++){
+                    Product Temp_Product = Temp_Parent.Batch.get(j);
+                    System.out.printf("%-10d | %-10d | %-15s%n", (j+1), Temp_Product.Quantity, Temp_Product.Expiration_Date.format(formatter));
+                }
+                System.out.println("=============================================\n");
+                System.out.println();
+            }
+        }
+    }
+        
+
+    public static void initial_products(ArrayList<Parent_Product> Storage, Scanner sc){
+    String Name_1 = "Surf";                     int Quantity_1 = 100;    double Price_1 = 10.5;   LocalDate Date_1 = LocalDate.of(2027, 1, 15);
+    String Name_2 = "Milo";                    int Quantity_2 = 80;     double Price_2 = 12.0;   LocalDate Date_2 = LocalDate.of(2027, 3, 20);
+    String Name_3 = "Ariel";                   int Quantity_3 = 60;     double Price_3 = 15.5;   LocalDate Date_3 = LocalDate.of(2026, 11, 5);
+    String Name_4 = "Bear Brand";              int Quantity_4 = 90;     double Price_4 = 8.0;    LocalDate Date_4 = LocalDate.of(2027, 6, 30);
+    String Name_5 = "Pampers";                 int Quantity_5 = 50;     double Price_5 = 25.0;   LocalDate Date_5 = LocalDate.of(2026, 8, 12);
+    String Name_6 = "Colgate";                 int Quantity_6 = 120;    double Price_6 = 5.5;    LocalDate Date_6 = LocalDate.of(2027, 9, 1);
+    String Name_7 = "Nescafe";                 int Quantity_7 = 75;     double Price_7 = 7.0;    LocalDate Date_7 = LocalDate.of(2026, 12, 25);
+    String Name_8 = "Dove";                    int Quantity_8 = 85;     double Price_8 = 9.5;    LocalDate Date_8 = LocalDate.of(2027, 4, 18);
+    String Name_9 = "Safeguard";               int Quantity_9 = 95;     double Price_9 = 6.5;    LocalDate Date_9 = LocalDate.of(2027, 2, 28);
+    String Name_10 = "Palmolive";              int Quantity_10 = 70;    double Price_10 = 18.0;  LocalDate Date_10 = LocalDate.of(2026, 10, 10);
+
+    Product Number1 = new Product(Name_1,  Quantity_1,  Price_1,  Date_1);
+    Product Number2 = new Product(Name_2,  Quantity_2,  Price_2,  Date_2);
+    Product Number3 = new Product(Name_3,  Quantity_3,  Price_3,  Date_3);
+    Product Number4 = new Product(Name_4,  Quantity_4,  Price_4,  Date_4);
+    Product Number5 = new Product(Name_5,  Quantity_5,  Price_5,  Date_5);
+    Product Number6 = new Product(Name_6,  Quantity_6,  Price_6,  Date_6);
+    Product Number7 = new Product(Name_7,  Quantity_7,  Price_7,  Date_7);
+    Product Number8 = new Product(Name_8,  Quantity_8,  Price_8,  Date_8);
+    Product Number9 = new Product(Name_9,  Quantity_9,  Price_9,  Date_9);
+    Product Number10 = new Product(Name_10, Quantity_10, Price_10, Date_10);
+
+    Product Exp1  = new Product(Name_1,  30, Price_1,  LocalDate.of(2025, 12, 1));
+    Product Exp2  = new Product(Name_2,  25, Price_2,  LocalDate.of(2025, 11, 10));
+    Product Exp3  = new Product(Name_3,  20, Price_3,  LocalDate.of(2026, 1, 5));
+    Product Exp4  = new Product(Name_4,  35, Price_4,  LocalDate.of(2025, 9, 20));
+    Product Exp5  = new Product(Name_5,  15, Price_5,  LocalDate.of(2026, 2, 14));
+    Product Exp6  = new Product(Name_6,  40, Price_6,  LocalDate.of(2025, 8, 30));
+    Product Exp7  = new Product(Name_7,  22, Price_7,  LocalDate.of(2026, 3, 1));
+    Product Exp8  = new Product(Name_8,  18, Price_8,  LocalDate.of(2025, 10, 22));
+    Product Exp9  = new Product(Name_9,  28, Price_9,  LocalDate.of(2026, 1, 31));
+    Product Exp10 = new Product(Name_10, 12, Price_10, LocalDate.of(2025, 7, 15));
+
+    Product Soon1  = new Product(Name_1,  40, Price_1,  LocalDate.of(2026, 4, 20));
+    Product Soon2  = new Product(Name_2,  30, Price_2,  LocalDate.of(2026, 5, 1));
+    Product Soon3  = new Product(Name_3,  25, Price_3,  LocalDate.of(2026, 4, 15));
+    Product Soon4  = new Product(Name_4,  45, Price_4,  LocalDate.of(2026, 4, 28));
+    Product Soon5  = new Product(Name_5,  20, Price_5,  LocalDate.of(2026, 5, 3));
+    Product Soon6  = new Product(Name_6,  50, Price_6,  LocalDate.of(2026, 4, 10));
+    Product Soon7  = new Product(Name_7,  35, Price_7,  LocalDate.of(2026, 5, 2));
+    Product Soon8  = new Product(Name_8,  28, Price_8,  LocalDate.of(2026, 4, 25));
+    Product Soon9  = new Product(Name_9,  38, Price_9,  LocalDate.of(2026, 4, 18));
+    Product Soon10 = new Product(Name_10, 22, Price_10, LocalDate.of(2026, 4, 30));
+
+    ArrayList<Product> Batch_1 = new ArrayList<>();   Batch_1.add(Number1);   Batch_1.add(Exp1);   Batch_1.add(Soon1);
+    ArrayList<Product> Batch_2 = new ArrayList<>();   Batch_2.add(Number2);   Batch_2.add(Exp2);   Batch_2.add(Soon2);
+    ArrayList<Product> Batch_3 = new ArrayList<>();   Batch_3.add(Number3);   Batch_3.add(Exp3);   Batch_3.add(Soon3);
+    ArrayList<Product> Batch_4 = new ArrayList<>();   Batch_4.add(Number4);   Batch_4.add(Exp4);   Batch_4.add(Soon4);
+    ArrayList<Product> Batch_5 = new ArrayList<>();   Batch_5.add(Number5);   Batch_5.add(Exp5);   Batch_5.add(Soon5);
+    ArrayList<Product> Batch_6 = new ArrayList<>();   Batch_6.add(Number6);   Batch_6.add(Exp6);   Batch_6.add(Soon6);
+    ArrayList<Product> Batch_7 = new ArrayList<>();   Batch_7.add(Number7);   Batch_7.add(Exp7);   Batch_7.add(Soon7);
+    ArrayList<Product> Batch_8 = new ArrayList<>();   Batch_8.add(Number8);   Batch_8.add(Exp8);   Batch_8.add(Soon8);
+    ArrayList<Product> Batch_9 = new ArrayList<>();   Batch_9.add(Number9);   Batch_9.add(Exp9);   Batch_9.add(Soon9);
+    ArrayList<Product> Batch_10 = new ArrayList<>();  Batch_10.add(Number10); Batch_10.add(Exp10); Batch_10.add(Soon10);
+
+    Storage.add(new Parent_Product(Name_1,  Batch_1));
+    Storage.add(new Parent_Product(Name_2,  Batch_2));
+    Storage.add(new Parent_Product(Name_3,  Batch_3));
+    Storage.add(new Parent_Product(Name_4,  Batch_4));
+    Storage.add(new Parent_Product(Name_5,  Batch_5));
+    Storage.add(new Parent_Product(Name_6,  Batch_6));
+    Storage.add(new Parent_Product(Name_7,  Batch_7));
+    Storage.add(new Parent_Product(Name_8,  Batch_8));
+    Storage.add(new Parent_Product(Name_9,  Batch_9));
+    Storage.add(new Parent_Product(Name_10, Batch_10));
+}
+
+    public static void batch_sorter(ArrayList<Product> Batch) {
+        boolean Swapped;
+        int Size = Batch.size();
+        do {
+            Swapped = false;
+            for (int i = 0; i < Size - 1; i++) {
+                Product Temp_Product1 = Batch.get(i);
+                Product Temp_Product2 = Batch.get(i + 1);
+
+                if (Temp_Product1.Expiration_Date.isAfter(Temp_Product2.Expiration_Date)) {
+                    Product Temp = Temp_Product1;
+                    Batch.set(i, Temp_Product2);
+                    Batch.set(i + 1, Temp);
+                    Swapped = true;
+                }
+            }
+        } while (Swapped);
+    }
+}
+
+
+class Product {
+    String Name;
+    int Quantity;
+    double Price;
+    LocalDate Expiration_Date;
+
+    Product(String Name, int Quantity, double Price, LocalDate Expiration_Date){
+        this.Name = Name.toUpperCase();
+        this.Quantity = Quantity;
+        this.Price = Price;
+        this.Expiration_Date = Expiration_Date;
+    }
+}
+
+
+class Parent_Product {
+    String Name;
+    ArrayList<Product> Batch = new ArrayList<>();
+
+    Parent_Product(String Name, ArrayList<Product> Batch){
+        this.Name = Name.toUpperCase();
+        this.Batch = Batch;
+    }
+}
